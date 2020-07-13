@@ -213,7 +213,7 @@ def transform_data(data):
     return data
 
 def median_absolute_errors(x, y, log_bool=None):
-    reg_params = 10.**np.linspace(-10, 5, 10)
+    reg_params = np.linspace(0.01, 0.9, 10)
     models = [linear_model.Ridge(), RidgeCV(alphas=reg_params, cv=5), linear_model.Lasso(),
               LassoCV(alphas=reg_params, cv=5), linear_model.ElasticNet(), linear_model.BayesianRidge()]
     model_labels = np.array(['Ridge', 'RidgeCV', 'Lasso', 'LassoCV', 'ElasticNet', 'BayesRidge'])
@@ -291,4 +291,4 @@ if __name__ == '__main__':
     y_train = data['price'].values
     y_log = data['price'].apply(lambda x: math.log(x))
 
-    median_absolute_errors(x_train, y_log)
+    median_absolute_errors(x_train, y_log, True)
