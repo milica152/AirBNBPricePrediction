@@ -61,12 +61,13 @@ def drop_columns(data):
     data = data.drop('monthly_price', axis=1)
     data = data.drop('license', axis=1)
     data = data.drop('jurisdiction_names', axis=1)
-    data = data.drop('host_response_time', axis=1)    # 19 000 null values
-    data = data.drop('host_response_rate', axis=1)    # 19 000 null values
-    data = data.drop('host_acceptance_rate', axis=1)    # 19 000 null values
-    data = data.drop('reviews_per_month', axis=1)   # 15 000 null values
-    data = data.drop('security_deposit', axis=1)    # 15 000 null values
-    data = data.drop('cleaning_fee', axis=1)    # 11 500 null values
+    data = data.drop('host_response_time', axis=1)    # 19 310 null values (vise od pola)
+    data = data.drop('host_response_rate', axis=1)    # 19 310 null values (vise od pola)
+
+    # data = data.drop('host_acceptance_rate', axis=1)    # 12 643 null values
+    # data = data.drop('reviews_per_month', axis=1)   # 14 906 null values
+    # data = data.drop('security_deposit', axis=1)    # 15 642 null values
+    # data = data.drop('cleaning_fee', axis=1)    # 11 520 null values
 
 
     # deleting redundant values
@@ -74,7 +75,7 @@ def drop_columns(data):
     data = data.drop('neighbourhood', axis=1)
     data = data.drop('calculated_host_listings_count', axis=1)
 
-    # deleting numeric values
+    # deleting numeric values (nisam sigurna dal???)
     data = data.drop('minimum_nights', axis=1)
     data = data.drop('maximum_nights', axis=1)
     data = data.drop('minimum_minimum_nights', axis=1)
@@ -120,8 +121,6 @@ def fill_blank(data):
 def encode_data(data):
 
     encoder = preprocessing.LabelEncoder()
-    data['host_is_superhost'] = encoder.fit_transform(data['host_is_superhost'].astype('str'))
-    data['host_identity_verified'] = encoder.fit_transform(data['host_identity_verified'].astype('str'))
     data['neighbourhood_cleansed'] = encoder.fit_transform(data['neighbourhood_cleansed'].astype('str'))
     data['is_location_exact'] = encoder.fit_transform(data['is_location_exact'].astype('str'))
     data['property_type'] = encoder.fit_transform(data['property_type'].astype('str'))
@@ -138,17 +137,43 @@ def encode_data(data):
     return data
 
 
+def transform_data(data):
+    #remove % from fields and convert to float
+    data['host_acceptance_rate'] = data['host_acceptance_rate'].str.replace('%', '').astype(float)
+
+    #boolean vrednosti
+    bool_col = ['host_is_superhost', 'host_identity_verified', 'is_location_exact',
+                'has_availability', 'requires_license', 'instant_bookable', 'is_business_travel_ready',
+                'require_guest_profile_picture', 'require_guest_phone_verification']
+    data[bool_col] = data[bool_col].replace({'t': 1, 'f': 0})
+
+    #prices remove $ and convert to float
+    #dodaj 'security_deposit', 'cleaning_fee' kad se fill NA
+    price_col = ['price', 'extra_people']
+    data['price'] = data['price'].str.replace('$', '')
+    data['price'] = data['price'].str.replace(',', '').astype(float)
+    data['extra_people'] = data['extra_people'].str.replace('$', '')
+    data['extra_people'] = data['extra_people'].str.replace(',', '').astype(float)
+
+
+
+
 if __name__ == '__main__':
     path = sys.argv[1]
     data = pd.read_csv(path)
     #print(data)
 
     data = drop_columns(data)
-    #print(data)
     data = fill_blank(data)
-    #print(data)
+
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+
+        print(data.isnull().sum())
+        # more_than_50 = list(df.columns[df.isnull().mean() > 0.5])
+        # print(more_than_50)
+
+    data = transform_data(data)
     data = encode_data(data)
-    #print(data)
 
     x_train = data.drop('price', axis=1).values
     y_train = data['price'].values
