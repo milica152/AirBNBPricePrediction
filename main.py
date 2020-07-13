@@ -143,9 +143,7 @@ def encode_data(data):
 
 
     # dummies cancellation_policy
-    dummies = pd.get_dummies(data['cancellation_policy'], prefix='
-                             
-                             ')
+    dummies = pd.get_dummies(data['cancellation_policy'], prefix='cancellation_policy')
     data = data.drop('cancellation_policy', axis=1)
     data = data.join(dummies)
 
