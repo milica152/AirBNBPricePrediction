@@ -129,20 +129,37 @@ def fill_blank(data):
 
 
 def encode_data(data):
+    # ENCODING
 
-    encoder = preprocessing.LabelEncoder()
-    data['neighbourhood_cleansed'] = encoder.fit_transform(data['neighbourhood_cleansed'].astype('str'))
-    data['is_location_exact'] = encoder.fit_transform(data['is_location_exact'].astype('str'))
-    data['property_type'] = encoder.fit_transform(data['property_type'].astype('str'))
-    data['room_type'] = encoder.fit_transform(data['room_type'].astype('str'))
-    data['bed_type'] = encoder.fit_transform(data['bed_type'].astype('str'))
-    data['has_availability'] = encoder.fit_transform(data['has_availability'].astype('str'))
-    data['requires_license'] = encoder.fit_transform(data['requires_license'].astype('str'))
-    data['instant_bookable'] = encoder.fit_transform(data['instant_bookable'].astype('str'))
-    data['is_business_travel_ready'] = encoder.fit_transform(data['is_business_travel_ready'].astype('str'))
-    data['cancellation_policy'] = encoder.fit_transform(data['cancellation_policy'].astype('str'))
-    data['require_guest_profile_picture'] = encoder.fit_transform(data['require_guest_profile_picture'].astype('str'))
-    data['require_guest_phone_verification'] = encoder.fit_transform(data['require_guest_phone_verification'].astype('str'))
+    # dummies neighbourhood_cleansed
+    dummies = pd.get_dummies(data['neighbourhood_cleansed'], prefix='neighbourhood')
+    data = data.drop('neighbourhood_cleansed', axis=1)
+    data = data.join(dummies)
+
+    # dummies property_type
+    dummies = pd.get_dummies(data['property_type'], prefix='property_type')
+    data = data.drop('property_type', axis=1)
+    data = data.join(dummies)
+
+
+    # dummies cancellation_policy
+    dummies = pd.get_dummies(data['cancellation_policy'], prefix='
+                             
+                             ')
+    data = data.drop('cancellation_policy', axis=1)
+    data = data.join(dummies)
+
+
+    # dummies room_type
+    dummies = pd.get_dummies(data['room_type'], prefix='room_type')
+    data = data.drop('room_type', axis=1)
+    data = data.join(dummies)
+
+
+    # dummies bed_type
+    dummies = pd.get_dummies(data['bed_type'], prefix='bed_type')
+    data = data.drop('bed_type', axis=1)
+    data = data.join(dummies)
 
     return data
 
