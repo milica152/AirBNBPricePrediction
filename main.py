@@ -1,3 +1,4 @@
+import math
 import sys
 from tkinter import Image
 
@@ -5,13 +6,19 @@ import numpy as np
 import pandas as pd
 from pip._internal.req.req_file import preprocess
 from scipy.stats import stats
-from sklearn import model_selection, decomposition, preprocessing
+from sklearn import model_selection, decomposition, preprocessing, metrics, linear_model
 from sklearn.decomposition import PCA
 # from fancyimpute import MICE
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression, RidgeCV, LassoCV
+from sklearn.model_selection import train_test_split
 
 
+def standardize_col(col):
+    mean = np.mean(col)
+    std = np.std(col)
+    return col.apply(lambda x: (x - mean) / std)
 
 
 def remove_outliers(data):
@@ -103,6 +110,8 @@ def drop_columns(data):
     data = data.drop('smart_location', axis=1)
     data = data.drop('country_code', axis=1)
     data = data.drop('country', axis=1)
+    data = data.drop('latitude', axis=1)
+    data = data.drop('longitude', axis=1)
 
     return data
 
@@ -199,7 +208,39 @@ def transform_data(data):
     data['review_scores_location'] = np.where((data['number_of_reviews'] == 0) & (data['review_scores_location'].isnull()), 0, data.review_scores_location)
     data['review_scores_value'] = np.where((data['number_of_reviews'] == 0) & (data['review_scores_value'].isnull()), 0, data.review_scores_value)
 
+    data = data.drop(np.where(data['price'] == 0)[0])
+
     return data
+
+def median_absolute_errors(x, y, log_bool=None):
+    reg_params = 10.**np.linspace(-10, 5, 10)
+    models = [linear_model.Ridge(), RidgeCV(alphas=reg_params, cv=5), linear_model.Lasso(),
+              LassoCV(alphas=reg_params, cv=5), linear_model.ElasticNet(), linear_model.BayesianRidge()]
+    model_labels = np.array(['Ridge', 'RidgeCV', 'Lasso', 'LassoCV', 'ElasticNet', 'BayesRidge'])
+    model_errors = np.array([])
+
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.35, random_state=15)
+
+    for model in models:
+        model.fit(X_train, y_train)
+        if not log_bool:
+            model_err = metrics.median_absolute_error((y_test), model.predict(X_test))
+            model_errors = np.append(model_errors, model_err)
+        else:
+            model_err = metrics.median_absolute_error(np.exp(y_test), np.exp(model.predict(X_test)))
+            model_errors = np.append(model_errors, model_err)
+
+    model_position = np.arange(model_errors.shape[0])
+    models_sorted = np.argsort(model_errors)
+    for i, model in enumerate(model_labels):
+        print ('Model {} Results: {}'.format(model_labels[i], model_errors[i]))
+
+    plt.figure(figsize=(10,8))
+    plt.bar(model_position, model_errors[models_sorted], align='center')
+    plt.xticks(model_position, model_labels[models_sorted])
+    plt.xlabel('Estimator')
+    plt.ylabel('Median Absolute Error')
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -214,19 +255,40 @@ if __name__ == '__main__':
     data = encode_data(data)
     data = remove_outliers(data)
 
-    # trans = MICE(verbose=False)
-    # f_complete = trans.complete(data)
+    non_cat_vars = ['host_listings_count', 'accommodates', 'bedrooms', 'beds', 'number_of_reviews', 'availability_30',
+                     'bathrooms', 'guests_included', 'minimum_nights_avg_ntm', 'maximum_nights_avg_ntm', 'availability_60',
+                    'availability_90', 'availability_365', 'number_of_reviews_ltm', 'review_scores_rating', 'review_scores_accuracy',
+                    'review_scores_cleanliness', 'review_scores_checkin', 'review_scores_communication', 'review_scores_location',
+                    'review_scores_value', 'calculated_host_listings_count_entire_homes', 'calculated_host_listings_count_private_rooms',
+                    'calculated_host_listings_count_shared_rooms', 'reviews_per_month', 'host_verifications_count', 'amenities_count'
+                    ]
+    for col in non_cat_vars:
+        data[col] = data[col].astype(float)
+        data[col] = standardize_col(data[col])
+
 
     # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
     #
-    #     print(data.size())
+    #     print(data.isnull().sum())
 
+    # visualize distribution of price (target variable)
+    # plt.hist(data['price'], bins=50)
+    # plt.title("Histogram of Pricing")
+    # plt.xlabel("Pricing (USD) Per Day")
+    # plt.ylabel("Frequency")
+    # plt.savefig('price_distribution.png')
+    # plt.show()
+    # print(data['price'])
+    # data['price_log'] = data['price'].apply(lambda x: math.log(x))
+    # plt.hist(data['price_log'], bins=30)
+    # plt.title("Histogram of Pricing Log-Transformed")
+    # plt.xlabel("Pricing (USD) Per Day")
+    # plt.ylabel("Frequency")
+    # plt.savefig('price_distribution_log_transformed.png')
+    # plt.show()
+    # print(len(data.columns))
     x_train = data.drop('price', axis=1).values
     y_train = data['price'].values
+    y_log = data['price'].apply(lambda x: math.log(x))
 
-    # Podelimo podatke na trening i test (20% je za testiranje)
-    #train_x, test_x, train_y, test_y = \
-    #    model_selection.train_test_split(x_train, y_train, test_size=0.2, random_state=2)
-
-    # TRAIN
-
+    median_absolute_errors(x_train, y_log)
